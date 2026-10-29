@@ -9,7 +9,7 @@ Run commands from the project root using the project's virtual-environment Pytho
 | `scripts/start-local.ps1` or `bash scripts/start-local.sh` | Installs dependencies, builds the UI and starts the local API. |
 | `python scripts/demo.py` | Requires a running API and generated owner/reviewer tokens. Creates demo records and exports to ignored `artifacts/`. |
 | `python scripts/evaluate.py` | Uses a disposable SQLite database; rewrites the tracked synthetic evaluation outputs. |
-| `python scripts/source_manifest.py --write` | Refreshes SHA-256 hashes for tracked source files, excluding the manifest itself. |
+| `python scripts/source_manifest.py --write` | Refreshes SHA-256 hashes for tracked source files, excluding the manifest itself. UTF-8 CRLF/LF line endings are normalized; binary bytes are preserved. |
 | `python scripts/source_manifest.py --check` | Reports missing, extra or changed snapshot entries without rewriting the manifest. |
 
 `npm run build` compiles the UI; `npm run dev:ui` starts Vite with a separate API; `npm run preview:ui` previews compiled assets. The FastAPI launch path is the supported full-workflow local entry point.

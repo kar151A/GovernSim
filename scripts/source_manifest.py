@@ -7,9 +7,19 @@ import subprocess
 
 MANIFEST = 'SOURCE_MANIFEST.json'
 
+def file_digest(path: Path) -> str:
+    data = path.read_bytes()
+    try:
+        data.decode('utf-8')
+    except UnicodeDecodeError:
+        pass  # Binary artifacts retain their original bytes.
+    else:
+        data = data.replace(b'\r\n', b'\n')
+    return hashlib.sha256(data).hexdigest()
+
 def snapshot(root: Path) -> dict[str, str]:
     paths = subprocess.check_output(['git', 'ls-files', '-z'], cwd=root).decode('utf-8').split('\0')
-    return {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+    return {name: file_digest(root / name)
             for name in sorted(set(paths)) if name and name != MANIFEST}
 
 def main() -> int:
