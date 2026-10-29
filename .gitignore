@@ -18,3 +18,9 @@ frontend/dist/
 Thumbs.db
 *.log
 artifacts/
+
+# Local test coverage; committed evaluation summaries remain tracked separately.
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
