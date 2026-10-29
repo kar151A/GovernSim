@@ -8,6 +8,7 @@ This is a deployable **local MVP**. It is decision support, not legal advice, a 
 
 ## What works
 
+- Light/dark console themes with saved preference, responsive navigation, keyboard tabs and command search.
 - Seven React workspaces: AI estate, asset profile/graph, evidence, what-if simulator, change impact, human review and audit packages.
 - FastAPI API with server-verified roles: AI owner, risk officer, compliance reviewer, auditor and admin.
 - Five AI assets, ten controls, thirty authored representative requirements and twenty-five synthetic evidence artifacts.
@@ -43,7 +44,7 @@ LLM output cannot enter the deterministic status calculation. A summary with unk
 
 ## Windows: use your Documents\GovernSim folder
 
-Extract this archive's **contents** into your existing `Documents\GovernSim` folder. `README.md`, `compose.yaml`, `backend` and `frontend` should be directly inside it.
+Clone [kar151A/GovernSim](https://github.com/kar151A/GovernSim) into `Documents\GovernSim`, or extract the source archive there. `README.md`, `compose.yaml`, `backend` and `frontend` should be directly inside the folder.
 
 ### Option A — Docker Desktop (PostgreSQL + pgvector)
 
@@ -116,41 +117,23 @@ npm.cmd run build --prefix frontend
 
 See [evaluation/REPORT.md](evaluation/REPORT.md), [evaluation/metrics.json](evaluation/metrics.json) and [docs/VERIFICATION.md](docs/VERIFICATION.md). Metrics are measured on small synthetic fixtures; they are not production accuracy estimates. Type compatibility is not a validated semantic mapping benchmark.
 
-A PostgreSQL test is skipped unless `TEST_POSTGRES_URL` points at a **disposable** database. GitHub Actions defines SQLite, PostgreSQL/pgvector and frontend-build jobs. Those CI jobs have not run until the repository is pushed.
+A PostgreSQL test is skipped unless `TEST_POSTGRES_URL` points at a **disposable** database. GitHub Actions defines SQLite, PostgreSQL/pgvector and frontend-build jobs. Check the Actions run on the exact commit you intend to use; local results and older successful runs do not establish the result for a newer commit.
 
-## Create the GitHub repository
+## Update an existing checkout
 
-Target account: **kar151A**. No remote repository is created by extracting these files.
-
-If GitHub CLI is installed and authenticated:
+From the project root, commit or preserve any local changes before pulling:
 
 ```powershell
-cd "$env:USERPROFILE\Documents\GovernSim"
-git init -b main
-git add .
-git commit -m "Build GovernSim governance digital twin MVP"
-gh auth login
-gh repo create kar151A/GovernSim --private --source . --remote origin --push
+git pull --ff-only origin main
+npm.cmd ci --prefix frontend
+npm.cmd run build --prefix frontend
 ```
 
-The remote is private by default. Choose public only if you intend to publish this source. If the repository already exists, inspect it before adding a remote or pushing.
+Start the backend with the command in Option B and refresh the browser. Use the moon/sun control in the console header to choose an appearance; the sign-in screen has the same control. Database records and generated local credentials are excluded from Git updates.
 
-| Command | What it does and why it is used here |
-| --- | --- |
-| `git init -b main` | Starts version tracking in this folder and names the initial branch `main`. |
-| `git add .` | Stages the project's files for the first snapshot. `.gitignore` excludes credentials, local databases and dependencies. |
-| `git commit -m "..."` | Records the staged snapshot in local Git history. |
-| `gh auth login` | Authenticates GitHub CLI as your GitHub account. Complete this locally; never paste passwords or tokens into chat. |
-| `gh repo create ... --private --source . --remote origin --push` | Creates the private remote, connects this folder as `origin`, and uploads the initial commit. |
+For frontend development, `npm run dev:ui` starts Vite while the API runs separately on port 8000. `npm run preview:ui` previews a compiled frontend; use FastAPI for full API workflows.
 
-Alternatively create an empty repository at **https://github.com/new** under `kar151A`, named `GovernSim`, without adding an initial README. After the first three Git commands above:
-
-```powershell
-git remote add origin https://github.com/kar151A/GovernSim.git
-git push -u origin main
-```
-
-`git remote add` records where this folder should push; `git push -u` uploads `main` and remembers its upstream for later pushes.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [scripts/README.md](scripts/README.md), and [docs/UI_DESIGN.md](docs/UI_DESIGN.md) for change, command and design guidance.
 
 ## Configuration
 
