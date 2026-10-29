@@ -1,7 +1,7 @@
 import {useEffect,useRef,type ReactNode,type KeyboardEvent} from 'react';
 import {X,ChevronRight,ArrowUpRight,ShieldCheck,AlertCircle,RefreshCw} from 'lucide-react';
 import type {Decision,Graph} from './types';
-export function label(text:string) {return text.replaceAll('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());}
+export function label(text:string) {return text.replaceAll('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()).replace(/\b(?:Ai|Api|Llm|Eu|Uk|Us|Gdpr|Dpdp|Iso|Nist|Rmf|Dpia|Json|Pdf)\b/g,word=>word.toUpperCase());}
 export function date(text:string) {return new Date(text).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
 export function Badge({value}:{value:string}) {return <span className={`badge ${value.toLowerCase()}`}><span className="status-dot"/>{label(value)}</span>;}
 export function Empty({title,children}:{title:string;children?:ReactNode}) {return <div className="empty"><ShieldCheck size={28}/><h3>{title}</h3><div className="empty-description">{children}</div></div>;}

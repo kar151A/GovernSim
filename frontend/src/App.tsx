@@ -30,7 +30,7 @@ export default function App() {
  useEffect(()=>{function keyboard(e:KeyboardEvent){if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();setCommand(c=>{if(!c)setCommandQuery('');return !c;});}}window.addEventListener('keydown',keyboard);return()=>window.removeEventListener('keydown',keyboard);},[]);
  async function login(key:string) {setToken(key.trim());const who=await api<Identity>('/session');setIdentity(who);}
  async function run(task:()=>Promise<unknown>,message:string) {if(busy)return;setBusy(true);setError('');try{await task();setToast(message);setRevision(r=>r+1);}catch(err){setError((err as Error).message);}finally{setBusy(false);}}
- function go(next:View) {setView(next);setMobile(false);}
+ function go(next:View) {setView(next);setMobile(false);window.scrollTo({top:0,behavior:'instant'});}
  if(!identity)return <Login onLogin={login}/>;
  const props:WorkspaceProps|undefined=data&&data.profile.asset.asset_id===selected?{...data,selected,identity,onSelect:setSelected,go,inspect:setDecision,run,busy}:undefined;
  return <div className="app-shell"><a className="skip-link" href="#main-content">Skip to content</a>
