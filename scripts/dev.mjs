@@ -1,0 +1,11 @@
+import {spawn} from 'node:child_process';
+import {existsSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {join} from 'node:path';
+const root=fileURLToPath(new URL('..',import.meta.url));
+const local=join(root,process.platform==='win32'?'.venv/Scripts/python.exe':'.venv/bin/python');
+const python=existsSync(local)?local:(process.platform==='win32'?'python':'python3');
+const arg=(name,fallback)=>{const i=process.argv.indexOf(name);return i>=0?process.argv[i+1]:fallback;};
+const child=spawn(python,['-m','uvicorn','app.main:app','--app-dir','backend','--host',arg('--host','127.0.0.1'),'--port',arg('--port',process.env.PORT||'8000')],{cwd:root,stdio:'inherit'});
+child.on('exit',code=>process.exit(code||0));
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>child.kill(signal));

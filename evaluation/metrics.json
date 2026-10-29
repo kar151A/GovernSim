@@ -1,0 +1,232 @@
+{
+  "generated_at": "2026-10-29T14:18:38.826245+00:00",
+  "metrics": {
+    "scope": "Synthetic deterministic fixtures only; not estimates of enterprise or legal accuracy.",
+    "evidence_gap_precision": 1.0,
+    "evidence_gap_recall": 1.0,
+    "false_positive_rate": 0.0,
+    "confusion_matrix": {
+      "true_positive": 20,
+      "false_positive": 0,
+      "false_negative": 0,
+      "true_negative": 5
+    },
+    "type_compatibility_accuracy_on_manual_golden_set": 1.0,
+    "mapping_limitation": "Type compatibility is a coarse guard, not semantic mapping accuracy. All changed mappings require human review. No validated LLM mapping benchmark is claimed.",
+    "simulation_correctness": 1.0,
+    "representative_obligation_coverage": 1.0,
+    "covered_obligations": 30,
+    "library_obligations": 30,
+    "provenance_completeness": 1.0,
+    "human_review_escalation_accuracy": 1.0,
+    "audit_package_generation_ms": 7.846
+  },
+  "evidence_cases": [
+    {
+      "name": "missing_MODEL_CARD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "expired_MODEL_CARD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "unverified_MODEL_CARD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "low_confidence_MODEL_CARD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "missing_EVALUATION_REPORT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "expired_EVALUATION_REPORT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "unverified_EVALUATION_REPORT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "low_confidence_EVALUATION_REPORT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "missing_ACCESS_REVIEW",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "expired_ACCESS_REVIEW",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "unverified_ACCESS_REVIEW",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "low_confidence_ACCESS_REVIEW",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "missing_POLICY_DOCUMENT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "expired_POLICY_DOCUMENT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "unverified_POLICY_DOCUMENT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "low_confidence_POLICY_DOCUMENT",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "missing_HUMAN_OVERSIGHT_RECORD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "expired_HUMAN_OVERSIGHT_RECORD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "unverified_HUMAN_OVERSIGHT_RECORD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "low_confidence_HUMAN_OVERSIGHT_RECORD",
+      "expected_gap": true,
+      "predicted_gap": true
+    },
+    {
+      "name": "valid_current_fixture_1",
+      "expected_gap": false,
+      "predicted_gap": false
+    },
+    {
+      "name": "valid_current_fixture_2",
+      "expected_gap": false,
+      "predicted_gap": false
+    },
+    {
+      "name": "valid_current_fixture_3",
+      "expected_gap": false,
+      "predicted_gap": false
+    },
+    {
+      "name": "valid_current_fixture_4",
+      "expected_gap": false,
+      "predicted_gap": false
+    },
+    {
+      "name": "valid_current_fixture_5",
+      "expected_gap": false,
+      "predicted_gap": false
+    }
+  ],
+  "mapping_golden_set": [
+    {
+      "obligation": "O-GDPR-03",
+      "control": "C-04",
+      "expected_type_compatible": true,
+      "predicted_type_compatible": true
+    },
+    {
+      "obligation": "O-GDPR-03",
+      "control": "C-05",
+      "expected_type_compatible": false,
+      "predicted_type_compatible": false
+    },
+    {
+      "obligation": "O-INTERNAL_POLICY-01",
+      "control": "C-02",
+      "expected_type_compatible": true,
+      "predicted_type_compatible": true
+    },
+    {
+      "obligation": "O-INTERNAL_POLICY-01",
+      "control": "C-07",
+      "expected_type_compatible": false,
+      "predicted_type_compatible": false
+    },
+    {
+      "obligation": "O-INTERNAL_POLICY-02",
+      "control": "C-05",
+      "expected_type_compatible": true,
+      "predicted_type_compatible": true
+    },
+    {
+      "obligation": "O-INTERNAL_POLICY-02",
+      "control": "C-04",
+      "expected_type_compatible": false,
+      "predicted_type_compatible": false
+    },
+    {
+      "obligation": "O-NIST_AI_RMF-02",
+      "control": "C-06",
+      "expected_type_compatible": true,
+      "predicted_type_compatible": true
+    },
+    {
+      "obligation": "O-NIST_AI_RMF-02",
+      "control": "C-09",
+      "expected_type_compatible": false,
+      "predicted_type_compatible": false
+    }
+  ],
+  "simulation_checks": [
+    {
+      "change_type": "GEOGRAPHY",
+      "expected_new_obligation": "O-GDPR-01",
+      "passed": true
+    },
+    {
+      "change_type": "DATA_CHANGE",
+      "expected_new_obligation": "O-INTERNAL_POLICY-05",
+      "passed": true
+    },
+    {
+      "change_type": "INCIDENT",
+      "expected_new_obligation": "O-INTERNAL_POLICY-04",
+      "passed": true
+    }
+  ],
+  "escalation_checks": [
+    {
+      "expected_escalation": false,
+      "predicted_escalation": false
+    },
+    {
+      "expected_escalation": true,
+      "predicted_escalation": true
+    },
+    {
+      "expected_escalation": true,
+      "predicted_escalation": true
+    }
+  ]
+}
