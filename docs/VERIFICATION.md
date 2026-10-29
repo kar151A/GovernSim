@@ -11,13 +11,20 @@ Development date: 29 October 2026.
 - Python critical-error linting, dependency consistency checks, and Compose YAML parsing pass.
 - Synthetic evaluation script measures the artifact-gap cases, type-compatibility golden set, scenario changes, review escalations, provenance and local audit package time. See `evaluation/REPORT.md`.
 
+## Console redesign validation
+
+- All seven workspaces support light/dark appearances, saved user choice, cross-tab preference synchronization, responsive layouts, command navigation, labeled keyboard tabs and a focus-managed mobile drawer.
+- Desktop layouts, capture dialogs, simulation output and a 390px viewport were visually inspected using a separate harness with actual synthetic API response snapshots. The harness is not part of the shipped application.
+- The production frontend build and the 46-test backend regression suite pass after the redesign. One PostgreSQL test remains skipped locally.
+- The original GitHub main tree matched the pre-redesign snapshot before publishing; updates preserve its existing history.
+
 ## Not yet confirmed
 
 - Docker/PostgreSQL/pgvector execution: Docker is unavailable here. Compose, its healthchecks and an opt-in PostgreSQL integration test are included. The GitHub CI PostgreSQL job must run after you push the repository.
-- Browser interaction and visual QA: the managed preview attempted to launch, but its separate runtime could not find `uvicorn`/the local Python virtual environment (`No module named uvicorn`). No alternate browser infrastructure was used. This does not invalidate the backend integration tests or compiled frontend, but browser behavior remains unverified until you run it locally.
+- Live browser-to-API integration: the managed live preview cannot find `uvicorn`. Visual checks used the separate synthetic-response harness described above; backend integration is covered by TestClient tests.
 - Actual Windows PowerShell execution: launchers and explicit commands are provided, but the authoring environment is Linux.
 - Paid OpenAI/Anthropic requests: no provider credentials were used. Offline retrieval and the separation from kernel decisions are tested.
-- GitHub remote creation/push: no authenticated GitHub connection or CLI session was available. The intended destination is `kar151A/GovernSim`; repository creation instructions are included.
+- GitHub Actions results must be checked on the published commit; local checks do not establish remote CI success.
 - Public hosting: not attempted, as requested.
 
 Do not interpret passing synthetic tests as validated legal compliance, security certification, production scale or production model accuracy.

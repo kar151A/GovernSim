@@ -3,7 +3,7 @@
 The UI follows a compact enterprise console structure: slate utility header, grouped navigation, white workspace surfaces, blue links, amber primary actions and semantic governance states. The dark appearance uses the same hierarchy with navy surfaces and brighter foregrounds.
 
 - The header appearance button switches light and dark themes. The sign-in page has the same switch.
-- The first visit follows the operating-system preference; a deliberate choice is saved locally as `governsim.theme.v1`. Access tokens remain in memory and are not persisted.
+- The first visit follows the operating-system preference; the unsaved default follows system changes, and a deliberate choice is saved locally as `governsim.theme.v1`. Access tokens remain in memory and are not persisted.
 - All seven workspaces, forms, inspectors, graphs, feedback and export actions support both appearances.
 - Tab groups support Left/Right, Home and End, with labeled panels and visible focus.
 - Small screens use a drawer, stacked panels and horizontally scrollable tables.
