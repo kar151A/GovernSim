@@ -83,12 +83,12 @@
   "frontend/tsconfig.json": "8c55403262e275557ea6cb7897a542f3ce16ece4867a3c4e295ad870c3d6ea9a",
   "frontend/vite.config.ts": "3ddbe580e4f783dea658cecbca958c522e7b17b89b4e635a837603252523f8ce",
   "package.json": "b00245c74021e671a097613e76d85b2b2762a1a396ddaafa8d719669119482a3",
-  "scripts/README.md": "a4b71615d7f62387ea08cacab4a4e59ae40b3aa9797c92a0efc974f167b6015a",
+  "scripts/README.md": "6e1b6ab4b8827a8b6bc079badfef0f924d08f84145f1174abd2ea6735111d897",
   "scripts/bootstrap.py": "71d66e1c1032dd8d8900e6d0592de74f66f4b8e9c82fb4c6555391b7b1c0ce01",
   "scripts/demo.py": "8bf6763ad3cb2afc39e49b5313dc66db135205237c383b0f2e6034294abb8676",
   "scripts/dev.mjs": "172749f3be1cf2e9036cb4d1b7d03acd06e538e959b3eceb2194008a3df60220",
   "scripts/evaluate.py": "341754a8bcbf14af2ae93126cdac8ea0185a4e0097b870fb07682e59f3d83b32",
-  "scripts/source_manifest.py": "826254642ec6c8630bbbbf16b49f1146d5c72521e285f0b76b4f6a3540b1508e",
+  "scripts/source_manifest.py": "97c07e58abe5c1a3382f8bce76b9b2e7a1ad1f4a7d1de42afe85c230d92142ec",
   "scripts/start-local.ps1": "56e674f7a3098162cc19990ac1d538319bc15ebf190d623ceaf985b0ab61e239",
   "scripts/start-local.sh": "460892879c9c4d44268c1abf6cdb94a50ad1c890022b57f93dea1c9d631f5f6b"
 }
