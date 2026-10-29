@@ -38,3 +38,7 @@
 [data-theme=dark] .login-page{background:#101b2a}[data-theme=dark] .login-form h2{color:#e3edfb}[data-theme=dark] .login-help{color:#a0b5d1;border-color:#34445b}[data-theme=dark] .pill{background:#243f60;border-color:#466c9a;color:#bddbff}
 [data-theme=dark] .skeleton{background:#243a53;border-color:#344d6c}[data-theme=dark] .framework-bar{background:#2a405c}[data-theme=dark] .framework-bar>span{background:#76a8e0}[data-theme=dark] .change-item[open]{background:#1c3049}
 @media(max-width:760px){.theme-toggle span{display:none}.theme-toggle{padding:6px;min-width:31px}}
+
+[data-theme=dark] :is(.asset-name,.hero-link,.text-button){color:#91c5ff}
+[data-theme=dark] .asset-name small{color:#acbfd9}
+[data-theme=dark] .stat-card>div svg{color:#8facd0}
