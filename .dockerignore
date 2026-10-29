@@ -9,3 +9,11 @@
 *.db*
 artifacts
 upload
+
+# Keep host-generated validation files and local caches out of the build context.
+.coverage*
+coverage.xml
+htmlcov
+**/.ruff_cache
+**/*.sqlite*
+**/*.log
