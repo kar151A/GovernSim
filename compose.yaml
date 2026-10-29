@@ -6,6 +6,7 @@ services:
       POSTGRES_DB: governsim
       POSTGRES_USER: governsim
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run python scripts/bootstrap.py first}
+    # Keep registry and audit records across container replacement.
     volumes:
       - governsim-data:/var/lib/postgresql/data
     healthcheck:
@@ -16,6 +17,7 @@ services:
     restart: unless-stopped
   app:
     build: .
+    # Local-only browser entry point; PostgreSQL has no host port mapping.
     ports:
       - "127.0.0.1:8000:8000"
     environment:
@@ -35,11 +37,13 @@ services:
       retries: 10
       start_period: 40s
     init: true
+    # Persistent application data lives in PostgreSQL, not the image filesystem.
     read_only: true
     tmpfs:
       - /tmp
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
+# docker compose down retains this volume; down -v removes it.
 volumes:
   governsim-data:
