@@ -1,4 +1,4 @@
-import {useLayoutEffect,useState} from 'react';
+import {useEffect,useLayoutEffect,useState} from 'react';
 export type Theme='light'|'dark';
 export const THEME_KEY='governsim.theme.v1';
 export function preferredTheme():Theme {
@@ -12,6 +12,13 @@ export function applyTheme(theme:Theme) {
 export function useTheme() {
  const [theme,setTheme]=useState<Theme>(preferredTheme);
  useLayoutEffect(()=>{applyTheme(theme);},[theme]);
+ useEffect(()=>{
+  const media=window.matchMedia('(prefers-color-scheme: dark)');
+  function syncSystem(){try{if(localStorage.getItem(THEME_KEY))return;}catch{}setTheme(media.matches?'dark':'light');}
+  function syncStorage(event:StorageEvent){if(event.key===THEME_KEY||event.key===null)setTheme(preferredTheme());}
+  media.addEventListener('change',syncSystem);window.addEventListener('storage',syncStorage);
+  return()=>{media.removeEventListener('change',syncSystem);window.removeEventListener('storage',syncStorage);};
+ },[]);
  function toggleTheme() {
   const next=theme==='light'?'dark':'light';
   try{localStorage.setItem(THEME_KEY,next);}catch{/* Appearance still works without persistent storage. */}
