@@ -1,6 +1,7 @@
 import {useEffect,useState,type FormEvent} from 'react';
 import {LayoutDashboard,Boxes,Files,FlaskConical,GitBranch,ClipboardCheck,FileCheck2,Shield,ChevronDown,ArrowUpRight,Plus,Search,LogOut,RefreshCw,Command,ArrowRight,X,Menu,CheckCircle2,HelpCircle,PanelLeftClose,Sun,Moon} from 'lucide-react';
 import {api,setToken} from './api';
+import {useTheme} from './useTheme';
 import {Badge,Empty,Modal,Provenance,WorkspaceLoading,label} from './ui';
 import {Estate} from './Estate';
 import {AssetProfile,EvidenceWorkspace,ReviewQueue,AuditWorkspace,ChangeImpact} from './Workspaces';
@@ -22,9 +23,8 @@ function RegisterAsset({onClose,run}:{onClose:()=>void;run:WorkspaceProps['run']
 }
 
 export default function App() {
- const [theme,setTheme]=useState<'light'|'dark'>(()=>{try{const saved=localStorage.getItem('governsim.theme.v1');if(saved==='light'||saved==='dark')return saved;}catch{}return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';});
- useEffect(()=>{document.documentElement.dataset.theme=theme;try{localStorage.setItem('governsim.theme.v1',theme);}catch{}},[theme]);
- const themeToggle=<button className="theme-toggle" onClick={()=>setTheme(t=>t==='light'?'dark':'light')} aria-label={`Switch to ${theme==='light'?'dark':'light'} theme`} title={`Switch to ${theme==='light'?'dark':'light'} theme`}>{theme==='light'?<Moon size={17}/>:<Sun size={17}/>}<span>{theme==='light'?'Dark':'Light'}</span></button>;
+ const {theme,toggleTheme}=useTheme();
+ const themeToggle=<button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme==='light'?'dark':'light'} theme`} title={`Switch to ${theme==='light'?'dark':'light'} theme`}>{theme==='light'?<Moon size={17}/>:<Sun size={17}/>}<span>{theme==='light'?'Dark':'Light'}</span></button>;
  const [identity,setIdentity]=useState<Identity|null>(null),[view,setView]=useState<View>('estate'),[selected,setSelected]=useState('AS-SUPPORT');
  const [data,setData]=useState<{assets:Asset[];library:Library;queue:Queue;changes:Change[];scenarios:Scenario[];audit:Audit;profile:Profile;graph:Graph}|null>(null);
  const [error,setError]=useState(''),[toast,setToast]=useState(''),[busy,setBusy]=useState(false),[revision,setRevision]=useState(0),[register,setRegister]=useState(false),[decision,setDecision]=useState<Decision|null>(null),[mobile,setMobile]=useState(false),[command,setCommand]=useState(false),[commandQuery,setCommandQuery]=useState('');
