@@ -1,10 +1,10 @@
-import {useEffect,useRef,type ReactNode} from 'react';
-import {X,ChevronRight,ArrowUpRight,ShieldCheck,AlertCircle} from 'lucide-react';
+import {useEffect,useRef,type ReactNode,type KeyboardEvent} from 'react';
+import {X,ChevronRight,ArrowUpRight,ShieldCheck,AlertCircle,RefreshCw} from 'lucide-react';
 import type {Decision,Graph} from './types';
 export function label(text:string) {return text.replaceAll('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());}
 export function date(text:string) {return new Date(text).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
 export function Badge({value}:{value:string}) {return <span className={`badge ${value.toLowerCase()}`}><span className="status-dot"/>{label(value)}</span>;}
-export function Empty({title,children}:{title:string;children?:ReactNode}) {return <div className="empty"><ShieldCheck size={28}/><h3>{title}</h3><p>{children}</p></div>;}
+export function Empty({title,children}:{title:string;children?:ReactNode}) {return <div className="empty"><ShieldCheck size={28}/><h3>{title}</h3><div className="empty-description">{children}</div></div>;}
 export function Modal({title,onClose,children,wide=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean}) {
  const ref=useRef<HTMLDialogElement>(null);
  useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close();},[]);
@@ -19,4 +19,8 @@ export function GovernanceGraph({graph}:{graph:Graph}) {
  groups.forEach((kind,col)=>{const nodes=graph.nodes.filter(n=>n.kind===kind);nodes.forEach((n,index)=>positions.set(n.id,{x:20+col*216,y:42+index*58}));});
  const height=Math.max(300,...groups.map(k=>graph.nodes.filter(n=>n.kind===k).length*58+55));
  return <div className="graph-scroll"><svg viewBox={`0 0 1090 ${height}`} style={{minWidth:850,width:'100%',height}} role="img" aria-label="Governance graph connecting the asset, dependencies, obligations, controls and evidence"><title>Governance dependency graph</title>{groups.map((kind,col)=><text key={kind} x={20+col*216} y={19} className="graph-heading">{label(kind)}</text>)}{graph.edges.map((e,i)=>{const a=positions.get(e.source),b=positions.get(e.target);if(!a||!b)return null;return <path key={i} d={`M ${a.x+184} ${a.y+18} C ${a.x+208} ${a.y+18}, ${b.x-24} ${b.y+18}, ${b.x} ${b.y+18}`} className="graph-edge"/>;})}{graph.nodes.map(n=>{const p=positions.get(n.id);return p?<g key={n.id}><title>{n.label} · {n.status||n.kind}</title><rect x={p.x} y={p.y} width={184} height={37} rx={6} className={`graph-node ${n.kind} ${n.status==='EVIDENCE_GAP'?'gap':''}`}/><text x={p.x+10} y={p.y+23} className="graph-label">{n.label.length>24?n.label.slice(0,23)+'…':n.label}</text></g>:null;})}</svg></div>;
+}
+
+export function WorkspaceLoading() {
+ return <div className="workspace-loading" role="status" aria-label="Loading governance workspace"><div className="loading-heading"><RefreshCw size={18}/><span>Loading governance workspace…</span></div><div className="skeleton skeleton-title"/><div className="skeleton skeleton-hero"/><div className="loading-stats">{[0,1,2,3].map(i=><div className="skeleton" key={i}/>)}</div><div className="skeleton skeleton-table"/></div>;
 }
