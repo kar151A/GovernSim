@@ -24,3 +24,17 @@ export function GovernanceGraph({graph}:{graph:Graph}) {
 export function WorkspaceLoading() {
  return <div className="workspace-loading" role="status" aria-label="Loading governance workspace"><div className="loading-heading"><RefreshCw size={18}/><span>Loading governance workspace…</span></div><div className="skeleton skeleton-title"/><div className="skeleton skeleton-hero"/><div className="loading-stats">{[0,1,2,3].map(i=><div className="skeleton" key={i}/>)}</div><div className="skeleton skeleton-table"/></div>;
 }
+
+export function Tabs({id,label:accessibleLabel,items,value,onChange}:{id:string;label:string;items:{name:string;count?:number}[];value:string;onChange:(value:string)=>void}) {
+ function keyboard(event:KeyboardEvent<HTMLButtonElement>,index:number) {
+  let next=index;
+  if(event.key==='ArrowRight')next=(index+1)%items.length;
+  else if(event.key==='ArrowLeft')next=(index-1+items.length)%items.length;
+  else if(event.key==='Home')next=0;
+  else if(event.key==='End')next=items.length-1;
+  else return;
+  event.preventDefault();onChange(items[next].name);
+  document.getElementById(`${id}-tab-${items[next].name}`)?.focus();
+ }
+ return <div className="tabs" role="tablist" aria-label={accessibleLabel}>{items.map((item,index)=><button key={item.name} id={`${id}-tab-${item.name}`} role="tab" aria-selected={value===item.name} aria-controls={`${id}-panel`} tabIndex={value===item.name?0:-1} className={value===item.name?'active':''} onClick={()=>onChange(item.name)} onKeyDown={e=>keyboard(e,index)}>{item.name}{item.count!==undefined&&<span className="count">{item.count}</span>}</button>)}</div>;
+}
