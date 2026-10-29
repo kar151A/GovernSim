@@ -1,0 +1,23 @@
+:root {
+ font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+ font-size:14px; color:#172b4d; background:#f3f5f8; font-synthesis:none;
+ --ink:#172b4d; --muted:#5e6c84; --border:#dfe3e8; --blue:#0969da;
+ --blue-dark:#0753ac; --blue-soft:#edf5ff; --navy:#111e30; --amber:#ffae2b;
+ --surface:#fff; --radius:8px; --shadow:0 1px 2px #172b4d08;
+}
+*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}
+button,a,input,select,textarea{-webkit-tap-highlight-color:transparent}
+button{cursor:pointer;color:inherit}button:disabled{opacity:.55;cursor:not-allowed}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #2684ff;outline-offset:3px}
+h1,h2,h3,h4,p{margin:0}h1{font-size:28px;line-height:1.3;letter-spacing:-.7px;font-weight:650;color:#14243b}
+h2{font-size:16px;line-height:1.5;font-weight:650;display:flex;align-items:center;gap:9px;color:#192b43}
+h3{font-size:17px;line-height:1.5;margin:16px 0 8px}h4{font-size:13px;margin:24px 0 10px}
+p{line-height:1.7;margin:8px 0 16px}small{font-size:12px}
+code,.mono,pre{font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:12px}
+.muted{color:var(--muted)}.break{overflow-wrap:anywhere;word-break:break-word}.strong{font-weight:600}
+.eyebrow{color:#586a82;font-size:10px;font-weight:700;letter-spacing:1.1px;line-height:1.6}
+.fine-print{font-size:12px;color:var(--muted);line-height:1.7}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
