@@ -13,6 +13,7 @@ WORKDIR /app
 COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt && useradd --create-home --uid 10001 governsim
 COPY backend/app /app/app
+COPY scripts/manage_users.py /app/scripts/manage_users.py
 COPY --from=ui /build/dist /app/frontend/dist
 USER governsim
 EXPOSE 8000

@@ -3,18 +3,20 @@ import hashlib
 import hmac
 import json
 import logging
-import threading
 import time
 from contextlib import asynccontextmanager
 from typing import Annotated
 import networkx as nx
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select, text
 from . import config
+from . import auth
+from .locking import transaction_lock
 from .audit import append_event, digest, events, now, uid, verify
 from .db import SessionLocal, init_db, Asset, Control, Obligation, Evidence, EvidenceAttestation, Decision, Review, Assessment, Scenario, Mapping, ChangeEvent
 from .schemas import AssetInput, EvidenceInput, EvidenceReview, ReviewInput, ChangeInput, ControlInput, ObligationInput, MappingInput, MappingApproval, EvidenceEvent
@@ -24,12 +26,13 @@ from .seed import seed
 
 logger = logging.getLogger('governsim')
 # One process serializes SQLite transactions; PostgreSQL audit appends also use an advisory lock.
-transaction_lock = threading.Lock()
 
 @asynccontextmanager
 async def lifespan(app):
-    if not config.API_KEYS:
-        raise RuntimeError('No API keys configured. Run python scripts/bootstrap.py before starting.')
+    if config.AUTH_KEY:
+        auth.cipher()
+    elif not (config.ALLOW_LEGACY_API_KEYS and config.API_KEYS):
+        raise RuntimeError('No authentication encryption key. Run python scripts/bootstrap.py and restart.')
     init_db()
     with SessionLocal.begin() as session:
         agents.init_vector_store(session)
@@ -38,6 +41,7 @@ async def lifespan(app):
     yield
 
 app = FastAPI(title='GovernSim', version='1.0.0', description='Predictive governance decision support. Not legal advice.', lifespan=lifespan, redoc_url=None)
+app.include_router(auth.router)
 app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173'], allow_credentials=False, allow_methods=['GET', 'POST'], allow_headers=['Authorization', 'Content-Type'])
 security = HTTPBearer(auto_error=False)
 
@@ -59,18 +63,27 @@ async def request_context(request: Request, call_next):
     logger.info(json.dumps({'request_id': request_id, 'method': request.method, 'path': request.url.path, 'status': response.status_code, 'duration_ms': round((time.monotonic()-started)*1000, 2)}))
     return response
 
+@app.exception_handler(RequestValidationError)
+async def validation_error(request, exc):
+    # FastAPI's default validation response includes input values; omit them for credentials.
+    errors = [{'loc': error['loc'], 'msg': error['msg'], 'type': error['type']} for error in exc.errors()]
+    return JSONResponse({'detail': errors}, status_code=422)
+
 @app.exception_handler(ValueError)
 async def invalid_value(request, exc):
     return JSONResponse({'detail': str(exc)}, status_code=422)
 
 
-def principal(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)]):
-    if credentials:
+def principal(request: Request, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)]):
+    account = auth.account_principal(request)
+    if account:
+        return account
+    if credentials and config.ALLOW_LEGACY_API_KEYS:
         hashed = hashlib.sha256(credentials.credentials.encode()).hexdigest()
         for key, identity in config.API_KEYS.items():
             if hmac.compare_digest(key, hashed):
                 return identity
-    raise HTTPException(401, 'A valid access token is required', headers={'WWW-Authenticate': 'Bearer'})
+    raise HTTPException(401, 'Sign in with your account and complete two-factor verification', headers={'WWW-Authenticate': 'Bearer'})
 
 
 def role(*allowed):

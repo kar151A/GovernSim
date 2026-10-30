@@ -22,7 +22,11 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       DATABASE_URL: postgresql+psycopg://governsim:${POSTGRES_PASSWORD}@db:5432/governsim
-      GOVERNSIM_API_KEYS: ${GOVERNSIM_API_KEYS:?Run python scripts/bootstrap.py first}
+      GOVERNSIM_AUTH_KEY: ${GOVERNSIM_AUTH_KEY:?Run python scripts/bootstrap.py first}
+      GOVERNSIM_AUTH_COOKIE_SECURE: ${GOVERNSIM_AUTH_COOKIE_SECURE:-false}
+      GOVERNSIM_AUTH_ORIGINS: ${GOVERNSIM_AUTH_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      GOVERNSIM_ALLOW_LEGACY_API_KEYS: ${GOVERNSIM_ALLOW_LEGACY_API_KEYS:-false}
+      GOVERNSIM_API_KEYS: ${GOVERNSIM_API_KEYS:-}
       SEED_DEMO: ${SEED_DEMO:-false}
       LLM_PROVIDER: ${LLM_PROVIDER:-offline}
       LLM_API_KEY: ${LLM_API_KEY:-}

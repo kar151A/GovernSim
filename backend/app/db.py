@@ -102,3 +102,43 @@ class EvidenceAttestation(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     evidence_id: Mapped[str] = mapped_column(ForeignKey('evidence.id'), index=True)
     data: Mapped[dict] = mapped_column(JSON)
+
+# Account authentication is separate from immutable governance history.
+class AuthUser(Base):
+    __tablename__ = 'auth_users'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
+    role: Mapped[str] = mapped_column(String(32))
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    totp_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_totp_step: Mapped[int] = mapped_column(Integer, default=-1)
+    recovery_hashes: Mapped[list] = mapped_column(JSON, default=list)
+    enabled: Mapped[bool] = mapped_column(default=True)
+
+class AuthInvitation(Base):
+    __tablename__ = 'auth_invitations'
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('auth_users.id'), index=True)
+    expires_at: Mapped[float] = mapped_column()
+
+class AuthChallenge(Base):
+    __tablename__ = 'auth_challenges'
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('auth_users.id'), index=True)
+    purpose: Mapped[str] = mapped_column(String(16))
+    expires_at: Mapped[float] = mapped_column()
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+
+class AuthSession(Base):
+    __tablename__ = 'auth_sessions'
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('auth_users.id'), index=True)
+    csrf_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[float] = mapped_column()
+
+class AuthThrottle(Base):
+    __tablename__ = 'auth_throttles'
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    resets_at: Mapped[float] = mapped_column()
