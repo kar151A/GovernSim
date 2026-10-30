@@ -3,7 +3,7 @@ function csrfToken() {
  return value?decodeURIComponent(value.slice('governsim_csrf='.length)):'';
 }
 async function failure(response:Response,path:string):Promise<never> {
- if(response.status===401&&(!path.startsWith('/auth/')||path==='/auth/logout'))window.dispatchEvent(new Event('governsim:session-expired'));
+ if(response.status===401&&(!path.startsWith('/auth/')||path==='/auth/logout'||path==='/auth/password/change'))window.dispatchEvent(new Event('governsim:session-expired'));
  const data=await response.json().catch(()=>({detail:`Request failed (${response.status})`}));
  throw new Error(typeof data.detail==='string'?data.detail:Array.isArray(data.detail)?data.detail.map((e:{msg:string})=>e.msg).join('. '):JSON.stringify(data.detail));
 }
