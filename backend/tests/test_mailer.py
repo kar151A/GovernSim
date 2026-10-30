@@ -1,5 +1,7 @@
 """SMTP TLS, delivery failures, and configuration persistence without real email."""
 import smtplib
+import socket
+import ssl
 import pytest
 from app import mailer
 
@@ -55,7 +57,9 @@ def test_smtp_authentication_error_does_not_expose_provider_message(monkeypatch)
     assert 'private' not in str(result.value)
 
 
-def test_configure_email_preserves_existing_env_and_hides_sender_password(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize('host,password,stored', [('smtp.example.test', 'hidden-app-password', 'hidden-app-password'),
+                                                ('smtp.gmail.com', 'abcd efgh ijkl mnop', 'abcdefghijklmnop')])
+def test_configure_email_preserves_existing_env_and_hides_sender_password(tmp_path, monkeypatch, capsys, host, password, stored):
     import importlib.util
     from pathlib import Path
     from types import SimpleNamespace
@@ -67,9 +71,9 @@ def test_configure_email_preserves_existing_env_and_hides_sender_password(tmp_pa
     monkeypatch.setattr(config, 'AUTH_KEY', 'test-configuration-key')
     target = tmp_path / '.env'
     target.write_text('EXISTING_SETTING=preserve-me\n')
-    answers = iter(['smtp.example.test', 'ssl', '465', 'sender@example.test', 'sender@example.test'])
+    answers = iter([host, 'ssl', '465', '', 'sender@example.test'])
     monkeypatch.setattr('builtins.input', lambda prompt: next(answers))
-    monkeypatch.setattr(module.getpass, 'getpass', lambda prompt: 'hidden-app-password')
+    monkeypatch.setattr(module.getpass, 'getpass', lambda prompt: password)
     monkeypatch.setattr(module.mailer, 'send_message', lambda *args, **kwargs: None)
     monkeypatch.setattr(module.sys, 'argv', ['configure_email.py', '--admin-email', 'admin@example.test'])
     monkeypatch.setattr(module.db, 'init_db', lambda: None)
@@ -86,12 +90,14 @@ def test_configure_email_preserves_existing_env_and_hides_sender_password(tmp_pa
     module.main()
     contents = target.read_text()
     assert 'EXISTING_SETTING=preserve-me' in contents
-    assert "GOVERNSIM_SMTP_PASSWORD='hidden-app-password'" in contents
+    assert f"GOVERNSIM_SMTP_PASSWORD='{stored}'" in contents
+    assert "GOVERNSIM_SMTP_USERNAME='admin@example.test'" in contents
     assert '--role' in calls[0] and 'ADMIN' in calls[0]
-    assert 'hidden-app-password' not in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert password not in output and stored not in output
 
 
-def test_configure_email_failed_delivery_saves_nothing(tmp_path, monkeypatch):
+def test_configure_email_failed_delivery_saves_nothing(tmp_path, monkeypatch, capsys):
     import importlib.util
     from pathlib import Path
     from app import config
@@ -103,8 +109,40 @@ def test_configure_email_failed_delivery_saves_nothing(tmp_path, monkeypatch):
     answers = iter(['smtp.example.test', 'ssl', '465', 'sender@example.test', 'sender@example.test'])
     monkeypatch.setattr('builtins.input', lambda prompt: next(answers))
     monkeypatch.setattr(module.getpass, 'getpass', lambda prompt: 'hidden-app-password')
-    def fail(*args, **kwargs): raise mailer.DeliveryUnavailable()
+    def fail(*args, **kwargs): raise mailer.DeliveryUnavailable('private raw provider response', reason='authentication', smtp_code=535)
     monkeypatch.setattr(module.mailer, 'send_message', fail)
     monkeypatch.setattr(module.sys, 'argv', ['configure_email.py', '--admin-email', 'admin@example.test'])
     with pytest.raises(SystemExit): module.main()
     assert not (tmp_path / '.env').exists()
+    output = capsys.readouterr()
+    assert 'SMTP 535' in output.err
+    assert 'private raw provider response' not in output.err
+    assert 'hidden-app-password' not in output.err + output.out
+
+
+@pytest.mark.parametrize('error,reason,status', [
+    (smtplib.SMTPAuthenticationError(535, b'private provider response'), 'authentication', 535),
+    (smtplib.SMTPSenderRefused(550, b'private provider response', 'private-sender@example.test'), 'sender', 550),
+    (smtplib.SMTPRecipientsRefused({'private-recipient@example.test': (550, b'private provider response')}), 'recipient', None),
+    (smtplib.SMTPNotSupportedError('private provider response'), 'unsupported', None),
+    (smtplib.SMTPDataError(554, b'private provider response'), 'rejected', 554),
+    (ssl.SSLCertVerificationError(1, 'private provider response'), 'certificate', None),
+    (ssl.SSLError(1, 'private provider response'), 'tls', None),
+    (socket.gaierror(-2, 'private provider response'), 'dns', None),
+    (TimeoutError('private provider response'), 'timeout', None),
+    (ConnectionRefusedError('private provider response'), 'connection', None),
+])
+def test_smtp_failure_diagnostics_classify_cause_without_provider_data(monkeypatch, error, reason, status):
+    def fail(*args, **kwargs): raise error
+    monkeypatch.setattr(mailer.smtplib, 'SMTP_SSL', fail)
+    with pytest.raises(mailer.DeliveryUnavailable) as caught:
+        mailer.send_message('receiver@example.test', 'Test', 'private-message-body', connection=mailer.Settings(
+            'smtp.example.test', 465, 'ssl', 'sender@example.test', 'private-sender-key', 'sender@example.test'))
+    assert caught.value.reason == reason
+    assert caught.value.smtp_code == status
+    assert caught.value.__suppress_context__
+    visible = caught.value.diagnostic + str(caught.value)
+    for secret in ('private', 'receiver@example.test', 'sender@example.test'):
+        assert secret not in visible
+    if status:
+        assert f'SMTP {status}' in visible

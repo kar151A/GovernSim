@@ -21,6 +21,20 @@ A Gmail sender uses `smtp.gmail.com`, SSL port `465` (or STARTTLS port `587`), t
 
 **No SMTP credentials are bundled.** Until configured, the Send code button reports that email delivery is unavailable. SMTP acceptance does not guarantee inbox placement; check spam and your provider's delivery records. Restart the server after changing configuration.
 
+## If the delivery test fails
+
+The setup command now reports a fixed, credential-safe reason and, when available, a numeric SMTP status. It never prints the provider's raw response or your password. Settings are saved only after the test succeeds.
+
+| Diagnostic | Next step |
+| --- | --- |
+| Sender login rejected, often SMTP 535 | Confirm that the SMTP username and App Password belong to the same sending account. Gmail display spaces are removed automatically. |
+| Connection timeout or refusal | Check internet/firewall access to the configured port. For Gmail, try `starttls` with port `587` if SSL `465` is blocked. |
+| Hostname cannot be resolved | Check the SMTP host spelling and DNS connection. |
+| TLS/certificate failure | Check the chosen TLS mode, provider port, computer clock and trusted certificates. Certificate checks stay enabled. |
+| Sender or recipient rejected | Check the From/admin email and the provider's sender/recipient restrictions. |
+
+On Windows, `Test-NetConnection smtp.gmail.com -Port 465` checks basic reachability without sending credentials. A successful TCP check does not establish that SMTP authentication or email delivery will work. Share only the short diagnostic text when troubleshooting, never your `.env` file or App Password.
+
 ## First account setup
 
 1. Open `http://localhost:8000` and choose **Set up your account**.
