@@ -4,7 +4,11 @@ Governance operations require an authenticated account session issued after pass
 
 | Account endpoint | Purpose |
 | --- | --- |
-| `POST /api/auth/enroll/start` | Consume a valid invitation and prepare password + authenticator enrollment. |
+| `POST /api/auth/email/request` | Email a short-lived code for `signup` (approved pending account) or `reset` (enabled enrolled account). Generic success response; TLS SMTP required. |
+| `POST /api/auth/email/enroll` | Verify the requesting browser’s email code plus matching `password`/`password_confirm`, then prepare authenticator enrollment. |
+| `POST /api/auth/password/reset` | Consume a reset email code with new matching passwords; revoke all sessions/flows; preserve MFA and require sign-in. |
+| `POST /api/auth/password/change` | Require an account session, CSRF and `current_password`; set matching new passwords and revoke all sessions/flows. |
+| `POST /api/auth/enroll/start` | Original offline API compatibility: consume a valid administrator invitation and prepare password + authenticator enrollment. The website uses email verification. |
 | `POST /api/auth/enroll/confirm` | Verify the first authenticator code, issue a session, and return one-use recovery codes once. |
 | `POST /api/auth/login` | Check email/password and create a five-minute verification flow, without workspace access. |
 | `POST /api/auth/verify` | Verify authenticator or recovery code and issue the account session. |

@@ -4,7 +4,7 @@ Development date: 30 October 2026.
 
 ## Confirmed in the authoring environment
 
-- **76 passed, 1 skipped**: Python 3.12 backend regression suite using FastAPI TestClient and fresh SQLite databases. The skipped case requires disposable PostgreSQL. The earlier `evaluation/test-results.xml` records the pre-authentication evaluation; the count here includes 30 new account-authentication cases.
+- **109 passed, 1 skipped**: Python 3.12 backend regression suite using FastAPI TestClient and fresh SQLite databases. The skipped case requires disposable PostgreSQL. The earlier `evaluation/test-results.xml` records the pre-authentication evaluation; the count here includes 55 account-authentication cases and eight SMTP/configuration cases.
 - API → database → kernel → response workflows: registry/fixtures, evidence ingestion and independent verification, compatible mapping proposal/review, isolated simulations, actual changes and transitive dependents, policy profiles, conditional reviews, stale decisions/scenarios, concurrent audit appends, complete provenance, graph relations and all export formats.
 - Append-only triggers reject mutation; an intentionally bypassed trigger and tampered hash is detected by integrity verification.
 - TypeScript compilation and Vite production build succeed. Built HTML/JavaScript/CSS delivery, local policy source delivery, and API documentation security headers are covered by integration tests. The generated UI uses same-origin `/api` requests when served by FastAPI.
@@ -20,11 +20,19 @@ Development date: 30 October 2026.
 
 ## Account authentication validation
 
-- Thirty new authentication cases cover invite-only enrollment, password plus TOTP, encrypted secrets, digest-only tokens, single-use recovery codes, code replay, concurrent verification, session expiry/revocation, role enforcement, CSRF/origin checks, attempt limits, administrative reset and credential redaction.
+- Account authentication cases cover invite-only enrollment, password plus TOTP, encrypted secrets, digest-only tokens, single-use recovery codes, code replay, concurrent verification, session expiry/revocation, role enforcement, CSRF/origin checks, attempt limits, administrative reset and credential redaction.
 - Password verification alone cannot access protected APIs. Legacy bearer access is disabled by default. Account setup creates a full session only after a valid second factor.
-- The optional PostgreSQL integration test also exercises account enrollment, TOTP sign-in, cookie-authenticated mutation and logout against PostgreSQL. It remains skipped locally until the published CI job runs.
+- The optional PostgreSQL integration test also exercises account enrollment, TOTP sign-in, cookie-authenticated mutation, logout, email password reset and authenticated password change against PostgreSQL. It remains skipped locally until the published CI job runs.
 - Bootstrap upgrade was checked in disposable project copies: existing configuration is preserved and one persistent encryption key is added without printing it.
-- Empty sign-in and invitation forms were visually inspected in light/dark appearances and at 390px using the separate synthetic-response harness. No real credentials were entered in that browser. Authentication behavior was tested through the real FastAPI handlers and databases using TestClient.
+- The previous empty sign-in and invitation forms were visually inspected in light/dark appearances and at 390px using the separate synthetic-response harness. No real credentials were entered in that browser. Authentication behavior was tested through the real FastAPI handlers and databases using TestClient.
+
+## Email verification and password lifecycle validation
+
+- Twenty-five additional API cases exercise approved-email setup, server-side password confirmation, code storage, expiry, five-attempt limits, resend cooldown, old-code/browser invalidation, purpose binding, SMTP failure, disabled/unknown accounts, password changes/resets and revocation of prior sessions/flows.
+- Eight SMTP/setup cases verify certificate-checked SSL/STARTTLS, login after TLS, recipient addressing, rejected plaintext/header injection, safe provider errors, private credential persistence and saving nothing after failed delivery. Tests use a controlled in-memory mailbox/transport; no real email is sent.
+- A full local run passes 109 tests with one PostgreSQL-only case skipped. The TypeScript/Vite build and critical Python lint pass.
+- The email-setup button, Forgot password screen and signed-in Change password dialog are visually checked using a separate synthetic-response harness. Passwords and OTPs are not entered through browser automation.
+- Real delivery to an external mailbox remains unverified until an administrator supplies working SMTP credentials and checks the delivery test. A provider accepting SMTP is not proof that an email reached the inbox.
 
 ## Not yet confirmed
 

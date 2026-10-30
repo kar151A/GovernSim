@@ -5,7 +5,8 @@ Run commands from the project root using the project's virtual-environment Pytho
 | Command | Requirements and effect |
 | --- | --- |
 | `python scripts/bootstrap.py` | Standard library only. Creates local configuration and adds a missing account-encryption key on upgrades; preserves existing values. |
-| `python scripts/manage_users.py invite --email you@example.com --role ADMIN` | Creates a private, one-use account invitation; the user sets a password and enrolls an authenticator in the website. |
+| `python scripts/configure_email.py --admin-email you@example.com` | Prompts privately for SMTP credentials, tests delivery, saves local settings and approves the first administrator email. |
+| `python scripts/manage_users.py invite --email you@example.com --role ADMIN` | Approves a pending email for 24 hours. The user requests an email code, chooses and confirms a password, then enrolls an authenticator. |
 | `python scripts/manage_users.py revoke --email you@example.com` | Disables the account and revokes sessions and pending flows. |
 | `python scripts/manage_users.py reset --email you@example.com` | Requires typed local confirmation, revokes credentials/sessions and issues a new invitation while keeping the account identity. |
 | `node scripts/dev.mjs` | Starts FastAPI with the local virtual environment when available. Does not compile the UI. |

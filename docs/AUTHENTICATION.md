@@ -1,69 +1,87 @@
-# Account login and two-factor verification
+# Email verification, login and password recovery
 
-The website requires email + password, followed by an authenticator-app code. Email is an account identifier; no email-delivery or mailbox-verification service is configured. Account creation is invite-only and controlled by an administrator with local database access.
+GovernSim supports email-code account setup, password confirmation, authenticator-app two-factor sign-in, signed-in password changes and email-based password reset. An administrator approves account email addresses and roles locally. Entering an arbitrary email does not grant access to the shared company workspace.
 
-## Upgrade your existing Windows checkout
+## Upgrade and connect email on Windows
 
-Stop the running server, preserve any local source edits, then run from the project root:
+Stop the server and run from the project root. Preserve local source edits before pulling.
 
 ```powershell
 git pull --ff-only origin main
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
 .\.venv\Scripts\python.exe scripts\bootstrap.py
-.\.venv\Scripts\python.exe scripts\manage_users.py invite --email your-email@example.com --role ADMIN
+.\.venv\Scripts\python.exe scripts\configure_email.py --admin-email your-email@example.com
 npm.cmd run build --prefix frontend
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-Replace the example email with your account identifier. The invitation command displays a private one-use code locally; it does not send email. Existing registry records are preserved. New authentication tables are additive; they do not replace the governance tables.
+Replace the example email with yours. `git pull --ff-only` downloads the published changes without silently creating a merge commit. Bootstrap preserves existing settings and adds a persistent encryption key if missing. The email configuration command prompts locally for the SMTP host, TLS mode, username, sender and a hidden SMTP/App Password. It sends a delivery test before saving settings; it never prints the password. It also approves this email for the first administrator setup. Existing account roles are preserved, and disabled accounts remain disabled. The website account password is chosen separately in the browser.
 
-1. Open `http://localhost:8000` and choose **Set up invited account**.
-2. Enter the email and invitation code. Choose a unique password/passphrase of at least 15 characters.
-3. Scan the QR code in an authenticator app, or enter the setup key manually.
-4. Enter the app's six-digit code. Setup is confirmed only after a valid code.
-5. Save the ten recovery codes privately. They are displayed once; each can be used once with your password.
-6. Later sign-ins use email, password and an authenticator code. A code already accepted cannot be reused; wait for the next code when signing in again immediately.
+A Gmail sender uses `smtp.gmail.com`, SSL port `465` (or STARTTLS port `587`), the sender's email, and its App Password when supported by that account. Other SMTP providers work with their own connection settings. Enter credentials only in your local terminal. Never paste them into chat, source code, a command argument, or a `VITE_*` variable.
 
-Invitation codes expire after 24 hours. Once setup starts, the invitation is consumed and enrollment must finish within 5 minutes. If abandoned or expired, issue a new invitation for the unenrolled account.
+**No SMTP credentials are bundled.** Until configured, the Send code button reports that email delivery is unavailable. SMTP acceptance does not guarantee inbox placement; check spam and your provider's delivery records. Restart the server after changing configuration.
 
-Create separate AI_OWNER and COMPLIANCE_REVIEWER accounts to exercise independent review. Do not share one account between submitter and reviewer.
+## First account setup
+
+1. Open `http://localhost:8000` and choose **Set up your account**.
+2. Enter your approved email and click **Send verification code**.
+3. Enter the six-digit code from the email. Choose a unique passphrase of at least 15 characters and enter it again.
+4. Click **Verify email and create password**. Connect your authenticator by scanning the QR code or entering the setup key manually.
+5. Enter the authenticator's six-digit code, save the ten one-use recovery codes privately, and open the workspace.
+
+The email code expires after five minutes, permits five attempts and works only in the browser where it was requested. Resend becomes available after 60 seconds and invalidates older email codes. There is a five-email budget per account and twenty per IP in fifteen minutes. Unknown, disabled, enrolled-for-signup and unapproved addresses receive the same generic request response without an email code. SMTP configuration/delivery failures are reported separately; this is not a guarantee against all timing-based account enumeration.
+
+Account approval expires after 24 hours. Interrupted email setup can be restarted while that approval remains valid. Once enrollment succeeds, its approval is consumed. An administrator can approve or renew an unenrolled email:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\manage_users.py invite --email teammate@example.com --role AI_OWNER
+```
+
+There is no invitation field in the website. The CLI still prints a private invitation token for compatibility with the original offline API enrollment endpoint. Never invent an invitation token. Use separate AI_OWNER and COMPLIANCE_REVIEWER accounts for independent review.
+
+## Later visits and password changes
+
+Sign in with email, password and an authenticator code (or one-use recovery code). Previously accepted authenticator time steps cannot be reused; wait for the next code when signing in immediately again.
+
+- **Know your password:** after signing in, click the key icon **Change password** in the top bar. Enter your current password, new password and the new password again. Every session and pending login/reset flow is revoked; sign in again.
+- **Forgot your password:** click **Forgot password?**, enter your account email and request a reset code. Enter the emailed code plus a new password twice. The code is consumed and all sessions are revoked. Sign in using the new password and your existing authenticator or recovery code.
+
+Email reset changes only the password. It never disables two-factor verification, changes the email/role, re-enables a disabled account or creates a logged-in session. Password confirmation is checked on both client and server. The old password stops working after a successful reset/change.
 
 ## Docker Compose
 
-Run bootstrap locally, then rebuild/start Compose. Create accounts inside the app container so invitations use the PostgreSQL database:
+Configure SMTP locally first. The configuration command approves the local SQLite account; Compose uses a separate PostgreSQL database, so approve that email inside the running app container:
 
 ```powershell
-py -3.12 scripts\bootstrap.py
 docker compose up --build -d
 docker compose exec app python scripts/manage_users.py invite --email your-email@example.com --role ADMIN
 ```
 
-A plain local invitation command would use the local database; use the container command for Compose. The encryption key is passed through Compose environment configuration, never built into the image.
+Compose passes the SMTP settings and encryption key from the root `.env` to the server. They are excluded from Git and the Docker image. Recreate the app with `docker compose up -d --force-recreate app` after changing environment settings. Do not run the interactive email configuration command inside the read-only container.
 
 ## Session and secret handling
 
-- Argon2id password hashing uses `pwdlib` and its maintained Argon2 implementation.
-- PyOTP verifies six-digit TOTP with a 30-second step and a one-step clock-skew allowance. Accepted time steps are recorded per account to reject replay.
-- TOTP secrets must be recoverable for verification, so they are encrypted using Fernet from `cryptography`. The encryption key stays in server configuration, separate from the database.
-- Password verification grants only a limited five-minute flow. A full session is created after the second factor succeeds.
-- Session tokens, invitations and verification-flow tokens are random; the database holds SHA-256 digests, not the raw tokens.
-- Full sessions have an eight-hour absolute lifetime and an HttpOnly, SameSite=Strict cookie. A separate CSRF cookie is readable by the frontend; its hash is bound to the server session.
-- Mutating cookie-authenticated requests require an allowed Origin and matching CSRF header. Logout revokes the server-side session, rather than only hiding the UI.
-- Login attempts have database-backed 15-minute account and IP budgets. Each verification flow permits five failed codes. This is a single-worker MVP; add ingress abuse protection and validate trusted-proxy/IP handling before scaling.
-- Authentication events are recorded without passwords, codes, raw session tokens, invitations, recovery codes or authenticator secrets. Validation responses omit submitted input values.
-- The default configuration rejects old bearer tokens. Set `GOVERNSIM_ALLOW_LEGACY_API_KEYS=true` only for intentional legacy automation: that opt-in bypasses MFA and should remain disabled for account-only access.
+- Passwords use Argon2id through `pwdlib`; plaintext account passwords are never stored.
+- Short-lived email codes use a server-keyed HMAC bound to their challenge, purpose and account. Raw email codes are not stored, returned by the API or written to audit events.
+- Verification flows are limited, expiring and single-use. Neither mailbox verification nor password verification alone grants workspace access.
+- TOTP uses PyOTP with a 30-second step, one-step clock-skew allowance and per-account replay prevention. Recoverable TOTP secrets are encrypted with Fernet.
+- Session, invitation and challenge tokens are random; only SHA-256 digests are stored. Sessions have an eight-hour absolute expiry, HttpOnly and SameSite=Strict cookies, and server-side revocation.
+- Mutating cookie-authenticated requests require a trusted Origin and a session-bound CSRF header. Auth flows require a trusted Origin. Validation responses omit submitted input values.
+- SMTP uses verified TLS (SSL or STARTTLS) and has a network timeout. No plaintext SMTP transport or console-code fallback is provided. SMTP acceptance followed by a database failure requires requesting a fresh code.
+- The default configuration rejects legacy bearer tokens. `GOVERNSIM_ALLOW_LEGACY_API_KEYS=true` deliberately bypasses MFA for old automation and should remain disabled for account-only access.
+- This remains a single-worker application. SMTP sends occur synchronously under the auth transaction lock; use a durable email queue and distributed abuse controls before scaling.
 
-## Lost phone, disabled account or reset
+## Lost authenticator or disabling access
 
-A saved recovery code can replace the authenticator code after a correct password. It is consumed on successful use. If all factors are lost, an administrator with local database access can run:
+Use a saved recovery code with your password. If all second-factor options are lost, a local administrator verifies the person's identity through the organization's own process and runs:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\manage_users.py reset --email your-email@example.com
 ```
 
-The command requires typing `RESET`. It revokes sessions, pending flows and old credentials, preserves the principal identifier and role, and issues a new setup invitation. Invite-code possession must be protected and the person's identity verified through your own administrative process.
+This requires typing `RESET`, revokes all credentials/sessions, preserves the principal identifier and role, and re-approves setup. It is distinct from the email-only password reset, which preserves the authenticator.
 
-To disable access and revoke sessions:
+Disable an account and revoke access:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\manage_users.py revoke --email your-email@example.com
@@ -71,8 +89,8 @@ To disable access and revoke sessions:
 
 Use `docker compose exec app python scripts/manage_users.py ...` for the Compose database.
 
-## Before hosting publicly
+## Before public hosting
 
-Require HTTPS, set `GOVERNSIM_AUTH_COOKIE_SECURE=true`, set exact trusted HTTPS origins, disable legacy bearer access and use managed secret storage. The API and frontend must use the same origin (the Vite development proxy is supported). Back up `GOVERNSIM_AUTH_KEY` securely with a recoverable database backup; do not rotate or discard it blindly. Losing it makes existing encrypted authenticator secrets unreadable and requires account recovery/reset.
+Require HTTPS, set `GOVERNSIM_AUTH_COOKIE_SECURE=true`, set exact trusted HTTPS origins, keep frontend/API on the same origin, disable legacy bearer access and use managed secret storage. Back up `GOVERNSIM_AUTH_KEY` securely alongside a recoverable database backup. Losing this key makes encrypted authenticator secrets unreadable. Do not rotate it blindly.
 
-There is no public signup, email verification, email/SMS OTP, social login, self-service password reset, passkey support or enterprise SSO in this change. TOTP is not phishing-resistant. Enterprise identity lifecycle, phishing-resistant factors, organization isolation and operational monitoring remain further work.
+There is no public self-registration, SMS login, social login, passkey support, enterprise SSO or organization isolation. Account roles share one workspace. TOTP and email codes are not phishing-resistant factors. Enterprise identity lifecycle and monitoring remain further work.

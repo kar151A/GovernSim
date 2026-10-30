@@ -5,7 +5,8 @@ FastAPI serves authenticated `/api` workflows and the compiled console from `fro
 | Module | Responsibility |
 | --- | --- |
 | `app/main.py` | HTTP boundary, authorization, transactions and static delivery |
-| `app/auth.py` | Invite-only password/TOTP enrollment, sessions, CSRF, recovery and throttling |
+| `app/mailer.py` | TLS-only SMTP delivery; no code logging or console fallback |
+| `app/auth.py` | Approved-email verification, password/TOTP enrollment, password reset/change, sessions, CSRF, recovery and throttling |
 | `app/schemas.py` | Request shape and value validation |
 | `app/kernel.py` | Deterministic assessments of scoped evidence |
 | `app/service.py` | Saved assessments, isolated simulations and dependent reassessment |

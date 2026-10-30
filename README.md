@@ -10,7 +10,7 @@ This is a deployable **local MVP**. It is decision support, not legal advice, a 
 
 - Light/dark console themes with saved preference, responsive navigation, keyboard tabs and command search.
 - Seven React workspaces: AI estate, asset profile/graph, evidence, what-if simulator, change impact, human review and audit packages.
-- Invite-only email/password login, mandatory authenticator-app two-factor verification, one-use recovery codes, expiring HttpOnly-cookie sessions and server-side logout.
+- Email-code account setup with password confirmation, mandatory authenticator-app two-factor verification, email password reset, signed-in password changes, recovery codes and revocable sessions.
 - FastAPI API with server-verified roles: AI owner, risk officer, compliance reviewer, auditor and admin.
 - Five AI assets, ten controls, thirty authored representative requirements and twenty-five synthetic evidence artifacts.
 - Versioned deterministic assessments with five statuses: `COMPLIANT`, `EVIDENCE_GAP`, `HUMAN_REVIEW_REQUIRED`, `CONDITIONAL_APPROVAL`, `BLOCKED`.
@@ -63,7 +63,7 @@ Create your first account in the Compose database:
 docker compose exec app python scripts/manage_users.py invite --email your-email@example.com --role ADMIN
 ```
 
-Open **http://localhost:8000**, choose **Set up invited account**, enter your email and invitation code, create a password, and scan the QR code in your authenticator app. Enter the six-digit code and save the one-use recovery codes. Additional accounts receive roles from the local administrator; there is no public registration.
+Configure the SMTP sender locally with `python scripts/configure_email.py --admin-email your-email@example.com` after installing backend dependencies, then recreate the app container to load the settings. Open **http://localhost:8000**, choose **Set up your account**, and click **Send verification code**. Enter the emailed code, choose and confirm a password, then complete authenticator setup. Approve additional account emails with the container command above. See [email setup and recovery](docs/AUTHENTICATION.md).
 
 ```powershell
 # See health and startup errors
@@ -87,13 +87,13 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
 npm.cmd ci --prefix frontend
 npm.cmd run build --prefix frontend
-.\.venv\Scripts\python.exe scripts\manage_users.py invite --email your-email@example.com --role ADMIN
+.\.venv\Scripts\python.exe scripts\configure_email.py --admin-email your-email@example.com
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-The invitation command above creates the first administrator account setup code. Replace the example email with your own account identifier.
+The email configuration command prompts privately for your SMTP sender credentials, tests delivery and approves your first administrator email. Replace the example email with yours. No SMTP credentials are bundled.
 
-Open **http://localhost:8000** and choose **Set up invited account**. Enter the locally generated invitation, set a password of at least 15 characters, and complete authenticator setup. Save the recovery codes. Later visits use **email + password + authenticator code**. No virtual-environment activation is necessary when you call its Python executable directly. See [account setup](docs/AUTHENTICATION.md).
+Open **http://localhost:8000** and choose **Set up your account**. Request the email verification code, enter it, choose and confirm a password of at least 15 characters, and complete authenticator setup. Save the recovery codes. Later visits use **email + password + authenticator code**. **Forgot password?** sends an email reset code; signed-in users can choose **Change password** using the key icon. Both password changes revoke all sessions. See [account setup and email configuration](docs/AUTHENTICATION.md).
 
 A convenience launcher is included at `scripts\start-local.ps1`; the explicit commands above also work when PowerShell script execution is restricted. Linux/macOS: `bash scripts/start-local.sh`.
 
@@ -156,6 +156,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [scripts/README.md](scripts/README.md), 
 | `GOVERNSIM_AUTH_ORIGINS` | Exact comma-separated trusted browser origins, including scheme and port. |
 | `GOVERNSIM_ALLOW_LEGACY_API_KEYS` | Default `false`. Enabling this explicitly permits old automation tokens to bypass MFA. |
 | `GOVERNSIM_API_KEYS` | Legacy SHA-256 token-to-role mapping, used only when that opt-in is enabled. |
+| `GOVERNSIM_SMTP_HOST`, `GOVERNSIM_SMTP_PORT`, `GOVERNSIM_SMTP_SECURITY` | TLS SMTP sender connection; `ssl`/465 or `starttls`/587. |
+| `GOVERNSIM_SMTP_USERNAME`, `GOVERNSIM_SMTP_PASSWORD`, `GOVERNSIM_SMTP_FROM` | Private sender authentication and From address, configured locally. |
 | `POSTGRES_PASSWORD` | Generated hexadecimal password used by Compose. |
 | `DATABASE_URL` | SQLAlchemy URL; omitted for local SQLite, supplied automatically by Compose. |
 | `SEED_DEMO` | Explicit synthetic seeding; bootstrap enables it for the demo. Set `false` before a clean non-demo deployment. |
