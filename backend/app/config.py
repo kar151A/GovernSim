@@ -19,3 +19,11 @@ AUTH_KEY = os.getenv('GOVERNSIM_AUTH_KEY', '')
 AUTH_COOKIE_SECURE = os.getenv('GOVERNSIM_AUTH_COOKIE_SECURE', 'false').lower() == 'true'
 AUTH_ALLOWED_ORIGINS = {origin.strip() for origin in os.getenv('GOVERNSIM_AUTH_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000,http://localhost:5173,http://127.0.0.1:5173').split(',') if origin.strip()}
 ALLOW_LEGACY_API_KEYS = os.getenv('GOVERNSIM_ALLOW_LEGACY_API_KEYS', 'false').lower() == 'true'
+
+# Transactional email is sent by the server over TLS. Never expose these to Vite.
+SMTP_HOST = os.getenv('GOVERNSIM_SMTP_HOST', '')
+SMTP_PORT = int(os.getenv('GOVERNSIM_SMTP_PORT', '465'))
+SMTP_SECURITY = os.getenv('GOVERNSIM_SMTP_SECURITY', 'ssl')
+SMTP_USERNAME = os.getenv('GOVERNSIM_SMTP_USERNAME', '')
+SMTP_PASSWORD = os.getenv('GOVERNSIM_SMTP_PASSWORD', '')
+SMTP_FROM = os.getenv('GOVERNSIM_SMTP_FROM', '')

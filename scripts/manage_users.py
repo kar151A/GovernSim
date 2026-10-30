@@ -62,7 +62,8 @@ def main():
             session.add(AuthInvitation(token_hash=hashed(invitation), user_id=user.id, expires_at=time.time() + 86400))
         append_event(session, 'ACCOUNT_' + args.action.upper(), 'local-administrator', {'user_id': user.id, 'email': email, 'role': user.role})
     if invitation:
-        print('Account invitation created. Open GovernSim, choose Set up invited account, and enter:')
+        print('Account email approved. With SMTP configured, open GovernSim, choose Set up your account, then Send verification code.')
+        print('The invitation below is retained only for the original offline API enrollment path:')
         print(f'Email: {email}\nInvitation code: {invitation}\nRole: {user.role}\nExpires in 24 hours. Keep the code private.')
     else:
         print('Account disabled; existing sessions, challenges and invitations were revoked.')

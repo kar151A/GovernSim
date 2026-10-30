@@ -37,5 +37,6 @@ if not any(line.strip().startswith('GOVERNSIM_AUTH_KEY=') for line in contents.s
         handle.write(f'\n# Persistent account MFA encryption key. Back up with the database.\nGOVERNSIM_AUTH_KEY={auth_key}\n')
     os.chmod(env, 0o600)
     print('Account encryption key added. Existing configuration and registry records were preserved.')
-print('Website access: create an invitation with scripts/manage_users.py, then enroll password + authenticator 2FA.')
+print('Website email setup: run scripts/configure_email.py --admin-email YOUR_EMAIL after installing backend dependencies.')
+print('Then use Set up your account > Send verification code, choose and confirm a password, and enroll your authenticator.')
 print('Legacy API tokens are disabled by default and are not a website sign-in method.')
