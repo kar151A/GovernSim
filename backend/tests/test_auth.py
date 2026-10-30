@@ -391,3 +391,284 @@ def test_authentication_events_do_not_log_secrets(account):
     assert secret not in text
     assert account.cookies.get(auth.SESSION_COOKIE) not in text
     assert all(c not in text for c in recovery)
+
+# Email setup and password lifecycle reuse the same real API/database boundary.
+@pytest.fixture
+def email_account(account, monkeypatch):
+    from app import mailer
+    for key, value in {'SMTP_HOST': 'smtp.example.test', 'SMTP_PORT': 465, 'SMTP_SECURITY': 'ssl',
+                       'SMTP_USERNAME': 'sender@example.test', 'SMTP_PASSWORD': 'test-sender-password',
+                       'SMTP_FROM': 'sender@example.test'}.items():
+        monkeypatch.setattr(config, key, value)
+    account.outbox = []
+    def delivery(recipient, subject, body, **kwargs):
+        account.outbox.append({'recipient': recipient, 'subject': subject, 'body': body})
+    monkeypatch.setattr(mailer, 'send_message', delivery)
+    return account
+
+
+def request_mail(client, purpose='signup', email=EMAIL):
+    return client.post('/api/auth/email/request', headers=ORIGIN, json={'email': email, 'purpose': purpose})
+
+
+def mail_code(client):
+    import re
+    return re.search(r'\n([0-9]{6})\n', client.outbox[-1]['body']).group(1)
+
+
+def email_password(client, path='/email/enroll', password='a different private passphrase', code_value=None, confirmation=None):
+    return client.post('/api/auth' + path, headers=ORIGIN, json={
+        'code': code_value or mail_code(client), 'password': password,
+        'password_confirm': password if confirmation is None else confirmation})
+
+
+def test_email_setup_sends_code_then_requires_confirmation_and_mfa(email_account):
+    invite(email_account, role='ADMIN')
+    requested = request_mail(email_account)
+    assert requested.status_code == 200
+    assert email_account.outbox[-1]['recipient'] == EMAIL
+    assert '5 minutes' in email_account.outbox[-1]['body']
+    raw = mail_code(email_account)
+    assert raw not in requested.text
+    assert email_account.get('/api/assets').status_code == 401
+    mismatch = email_password(email_account, confirmation='does not match this password')
+    assert mismatch.status_code == 422
+    assert 'does not match this password' not in mismatch.text
+    setup = email_password(email_account)
+    assert setup.status_code == 200
+    assert email_account.get('/api/assets').status_code == 401
+    assert email_password(email_account).status_code == 401
+    confirmed = email_account.post('/api/auth/enroll/confirm', headers=ORIGIN,
+                                   json={'code': code(email_account, setup.json()['secret'])})
+    assert confirmed.status_code == 200
+    assert email_account.get('/api/session').json()['role'] == 'ADMIN'
+    with email_account.factory() as session:
+        assert session.scalar(select(AuthInvitation)) is None
+
+
+def test_email_codes_are_keyed_and_not_in_database_or_audit(email_account):
+    from app.audit import events
+    invite(email_account)
+    request_mail(email_account)
+    raw = mail_code(email_account)
+    with email_account.factory() as session:
+        challenge = session.scalar(select(AuthChallenge))
+        assert len(challenge.payload['code_hash']) == 64
+        assert challenge.payload['code_hash'] != auth.hashed(raw)
+        assert raw not in json.dumps(challenge.payload)
+        assert raw not in json.dumps(events(session))
+
+
+@pytest.mark.parametrize('situation', ['unknown', 'disabled', 'no_approval', 'expired_approval', 'already_enrolled'])
+def test_only_approved_pending_accounts_receive_signup_email(email_account, situation):
+    if situation != 'unknown':
+        invite(email_account, seconds=-1 if situation == 'expired_approval' else 300)
+        if situation == 'already_enrolled':
+            enroll(email_account)
+        elif situation in ('disabled', 'no_approval'):
+            from sqlalchemy import delete
+            with email_account.factory.begin() as session:
+                if situation == 'disabled':
+                    session.scalar(select(AuthUser)).enabled = False
+                else:
+                    session.execute(delete(AuthInvitation))
+    response = request_mail(email_account)
+    assert response.status_code == 200
+    assert response.json()['message'].startswith('If this email')
+    assert not email_account.outbox
+
+
+def test_email_request_requires_trusted_origin_and_no_client_roles(email_account):
+    invite(email_account)
+    payload = {'email': EMAIL, 'purpose': 'signup'}
+    assert email_account.post('/api/auth/email/request', json=payload).status_code == 403
+    assert email_account.post('/api/auth/email/request', headers={**ORIGIN, 'Origin': 'https://evil.test'}, json=payload).status_code == 403
+    assert email_account.post('/api/auth/email/request', headers=ORIGIN, json={**payload, 'role': 'ADMIN'}).status_code == 422
+    assert not email_account.outbox
+
+
+def test_resend_has_cooldown_and_invalidates_old_code_and_browser(email_account):
+    invite(email_account)
+    assert request_mail(email_account).status_code == 200
+    old_cookie = email_account.cookies.get(auth.FLOW_COOKIE)
+    old_code = mail_code(email_account)
+    assert request_mail(email_account).status_code == 429
+    email_account.clock['now'] += 61
+    assert request_mail(email_account).status_code == 200
+    new_cookie = email_account.cookies.get(auth.FLOW_COOKIE)
+    assert old_cookie != new_cookie
+    with email_account.factory() as session:
+        assert session.get(AuthChallenge, auth.hashed(old_cookie)) is None
+    fresh = email_account.cookies.get(auth.FLOW_COOKIE)
+    email_account.cookies.clear()
+    email_account.cookies.set(auth.FLOW_COOKIE, old_cookie)
+    assert email_password(email_account, code_value=old_code).status_code == 401
+    email_account.cookies.clear()
+    email_account.cookies.set(auth.FLOW_COOKIE, fresh)
+    assert email_password(email_account).status_code == 200
+
+
+def test_five_bad_email_codes_exhaust_the_flow(email_account):
+    invite(email_account)
+    request_mail(email_account)
+    wrong = f'{(int(mail_code(email_account)) + 1) % 1_000_000:06d}'
+    for _ in range(5):
+        assert email_password(email_account, code_value=wrong).status_code == 401
+    assert email_password(email_account).status_code == 401
+
+
+def test_email_code_expires_in_five_minutes(email_account):
+    invite(email_account)
+    request_mail(email_account)
+    email_account.clock['now'] += 301
+    assert email_password(email_account).status_code == 401
+
+
+def test_email_code_is_bound_to_requesting_browser(email_account):
+    invite(email_account)
+    request_mail(email_account)
+    email_account.cookies.clear()
+    assert email_password(email_account).status_code == 401
+
+
+def test_signup_code_cannot_reset_password(email_account):
+    invite(email_account)
+    request_mail(email_account)
+    assert email_password(email_account, path='/password/reset').status_code == 401
+    assert email_password(email_account).status_code == 200
+
+
+def test_missing_email_configuration_is_honest_and_fail_closed(email_account, monkeypatch):
+    invite(email_account)
+    monkeypatch.setattr(config, 'SMTP_HOST', '')
+    result = request_mail(email_account)
+    assert result.status_code == 503
+    assert 'not configured' in result.json()['detail']
+    assert not email_account.outbox
+    with email_account.factory() as session:
+        assert session.scalar(select(AuthChallenge)) is None
+
+
+def test_smtp_failure_does_not_issue_a_usable_code(email_account, monkeypatch):
+    from app import mailer
+    invite(email_account)
+    def fail(*args, **kwargs):
+        raise mailer.DeliveryUnavailable('secret credential must not be exposed')
+    monkeypatch.setattr(mailer, 'send_code', fail)
+    result = request_mail(email_account)
+    assert result.status_code == 503
+    assert 'secret credential' not in result.text
+    with email_account.factory() as session:
+        assert session.scalar(select(AuthChallenge)) is None
+
+
+def test_reset_revokes_all_sessions_and_flows_preserves_mfa_and_requires_login(email_account):
+    secret, recovery, _ = enroll(email_account)
+    old_session = email_account.cookies.get(auth.SESSION_COOKIE)
+    login(email_account)
+    old_flow = email_account.cookies.get(auth.FLOW_COOKIE)
+    with email_account.factory() as session:
+        encrypted_secret = session.scalar(select(AuthUser)).totp_encrypted
+    assert request_mail(email_account, 'reset').status_code == 200
+    reset_cookie = email_account.cookies.get(auth.FLOW_COOKIE)
+    new_password = 'my newly reset private passphrase'
+    result = email_password(email_account, '/password/reset', new_password)
+    assert result.status_code == 200
+    assert result.json()['sign_in_required']
+    assert auth.SESSION_COOKIE not in email_account.cookies
+    assert email_account.get('/api/assets').status_code == 401
+    with email_account.factory() as session:
+        user = session.scalar(select(AuthUser))
+        assert user.totp_encrypted == encrypted_secret
+        assert len(user.recovery_hashes) == len(recovery)
+        assert auth.passwords.verify(new_password, user.password_hash)
+        assert session.scalar(select(AuthSession)) is None
+        assert session.scalar(select(AuthChallenge)) is None
+    email_account.cookies.set(auth.SESSION_COOKIE, old_session)
+    assert email_account.get('/api/assets').status_code == 401
+    email_account.cookies.clear()
+    email_account.cookies.set(auth.FLOW_COOKIE, old_flow)
+    assert email_account.post('/api/auth/verify', headers=ORIGIN, json={'code': code(email_account, secret)}).status_code == 401
+    email_account.cookies.clear()
+    email_account.cookies.set(auth.FLOW_COOKIE, reset_cookie)
+    assert email_password(email_account, '/password/reset', new_password).status_code == 401
+    email_account.cookies.clear()
+    assert login(email_account).status_code == 401
+    assert login(email_account, password=new_password).status_code == 200
+    assert email_account.get('/api/assets').status_code == 401
+    assert email_account.post('/api/auth/verify', headers=ORIGIN, json={'code': code(email_account, secret)}).status_code == 200
+
+
+@pytest.mark.parametrize('kind', ['unknown', 'unenrolled', 'disabled'])
+def test_reset_request_does_not_reveal_missing_or_disabled_accounts(email_account, kind):
+    if kind == 'unenrolled':
+        invite(email_account)
+    elif kind == 'disabled':
+        enroll(email_account)
+        with email_account.factory.begin() as session:
+            session.scalar(select(AuthUser)).enabled = False
+    assert request_mail(email_account, 'reset').status_code == 200
+    assert not email_account.outbox
+
+
+def test_reset_code_cannot_survive_another_password_change(email_account):
+    enroll(email_account)
+    request_mail(email_account, 'reset')
+    with email_account.factory.begin() as session:
+        session.scalar(select(AuthUser)).password_hash = auth.passwords.hash('another newly chosen passphrase')
+    assert email_password(email_account, '/password/reset').status_code == 401
+
+
+def test_email_codes_are_limited_per_account_and_ip(email_account):
+    invite(email_account)
+    for _ in range(5):
+        assert request_mail(email_account).status_code == 200
+        email_account.clock['now'] += 61
+    assert request_mail(email_account).status_code == 429
+    assert len(email_account.outbox) == 5
+
+
+def test_change_password_requires_session_csrf_origin_and_current_password(email_account):
+    enroll(email_account)
+    new = 'my changed long private passphrase'
+    data = {'current_password': PASSWORD, 'password': new, 'password_confirm': new}
+    assert email_account.post('/api/auth/password/change', headers=ORIGIN, json=data).status_code == 403
+    assert email_account.post('/api/auth/password/change', headers={**csrf(email_account), 'Origin': 'https://evil.test'}, json=data).status_code == 403
+    assert email_account.post('/api/auth/password/change', headers=csrf(email_account), json={**data, 'current_password': 'wrong'}).status_code == 400
+    assert email_account.get('/api/session').status_code == 200
+    email_account.cookies.clear()
+    assert email_account.post('/api/auth/password/change', headers=ORIGIN, json=data).status_code == 401
+
+
+def test_change_password_revokes_sessions_and_keeps_authenticator(email_account):
+    secret, _, _ = enroll(email_account)
+    old = email_account.cookies.get(auth.SESSION_COOKIE)
+    new = 'my changed long private passphrase'
+    data = {'current_password': PASSWORD, 'password': new, 'password_confirm': new}
+    result = email_account.post('/api/auth/password/change', headers=csrf(email_account), json=data)
+    assert result.status_code == 200
+    assert email_account.get('/api/assets').status_code == 401
+    email_account.cookies.set(auth.SESSION_COOKIE, old)
+    assert email_account.get('/api/session').status_code == 401
+    email_account.cookies.clear()
+    assert login(email_account).status_code == 401
+    assert login(email_account, password=new).status_code == 200
+    assert email_account.post('/api/auth/verify', headers=ORIGIN, json={'code': code(email_account, secret)}).status_code == 200
+
+
+def test_password_change_validation_never_echoes_credentials(email_account):
+    enroll(email_account)
+    new = 'my new long private passphrase'
+    result = email_account.post('/api/auth/password/change', headers=csrf(email_account), json={
+        'current_password': PASSWORD, 'password': new, 'password_confirm': 'mismatched private passphrase'})
+    assert result.status_code == 422
+    assert PASSWORD not in result.text and new not in result.text
+    assert 'mismatched private passphrase' not in result.text
+
+
+def test_reset_and_change_reject_reusing_current_password(email_account):
+    enroll(email_account)
+    data = {'current_password': PASSWORD, 'password': PASSWORD, 'password_confirm': PASSWORD}
+    assert email_account.post('/api/auth/password/change', headers=csrf(email_account), json=data).status_code == 400
+    request_mail(email_account, 'reset')
+    assert email_password(email_account, '/password/reset', PASSWORD).status_code == 400

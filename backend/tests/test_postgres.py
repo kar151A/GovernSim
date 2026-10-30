@@ -61,6 +61,29 @@ def test_postgresql_pgvector_workflow(monkeypatch):
         assert client.post('/api/assess/AS-SUPPORT', headers=mutation_headers, json={}).status_code == 200
         assert client.post('/api/auth/logout', headers=mutation_headers, json={}).status_code == 200
         assert client.get('/api/assets', headers=headers).status_code == 401
+        # Exercise the email reset and authenticated password change lifecycle on PostgreSQL.
+        from app import mailer
+        sent = []
+        monkeypatch.setattr(mailer, 'settings', lambda: None)
+        monkeypatch.setattr(mailer, 'send_code', lambda email, value, purpose: sent.append((email, value, purpose)))
+        assert client.post('/api/auth/email/request', headers=origin,
+                           json={'email': 'pg-owner@example.test', 'purpose': 'reset'}).status_code == 200
+        new_password = 'a newly reset PostgreSQL passphrase'
+        assert client.post('/api/auth/password/reset', headers=origin, json={
+            'code': sent[-1][1], 'password': new_password, 'password_confirm': new_password}).status_code == 200
+        assert client.get('/api/assets').status_code == 401
+        assert client.post('/api/auth/login', headers=origin,
+                           json={'email': 'pg-owner@example.test', 'password': new_password}).status_code == 200
+        # A recovery code avoids reusing the just-consumed TOTP time step.
+        assert client.post('/api/auth/verify', headers=origin,
+                           json={'code': confirmed.json()['recovery_codes'][0], 'recovery': True}).status_code == 200
+        changed_password = 'another new PostgreSQL private passphrase'
+        assert client.post('/api/auth/password/change', headers={**origin, 'X-CSRF-Token': client.cookies.get(CSRF_COOKIE)},
+                           json={'current_password': new_password, 'password': changed_password,
+                                 'password_confirm': changed_password}).status_code == 200
+        assert client.get('/api/assets').status_code == 401
+        assert client.post('/api/auth/login', headers=origin,
+                           json={'email': 'pg-owner@example.test', 'password': new_password}).status_code == 401
         with factory() as session:
             with pytest.raises(Exception):
                 session.execute(text('DELETE FROM audit_events WHERE sequence=1'))
