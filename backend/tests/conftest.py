@@ -21,6 +21,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(db, 'SessionLocal', factory)
     monkeypatch.setattr(main, 'SessionLocal', factory)
     monkeypatch.setattr(config, 'SEED_DEMO', True)
+    monkeypatch.setattr(config, 'ALLOW_LEGACY_API_KEYS', True)
     monkeypatch.setattr(config, 'API_KEYS', {hashlib.sha256(token.encode()).hexdigest():{'name':role.lower(),'role':role} for role,token in TOKENS.items()})
     with TestClient(main.app) as value:
         value.factory = factory
