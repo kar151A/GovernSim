@@ -6,8 +6,8 @@ The multi-stage Dockerfile builds the React UI, installs Python dependencies and
 
 This MVP is prepared for local deployment. A hosted enterprise deployment requires additional engineering:
 
-- Replace local bearer-token identities with named SSO/OIDC identities, identity lifecycle/rotation and an organization-aware authorization model. Current roles share a single estate; there is no tenant isolation.
-- Serve behind TLS, bind only the intended ingress, configure allowed origins and preserve server-side authorization. Do not make the local token file public.
+- Integrate enterprise SSO/OIDC as needed. The current invite-only local accounts require password + TOTP, support revocation/recovery and use expiring cookie sessions. Add an organization-aware authorization model. Current roles share a single estate; there is no tenant isolation.
+- Serve behind TLS, bind only the intended ingress, configure allowed origins and preserve server-side authorization. Set `GOVERNSIM_AUTH_COOKIE_SECURE=true`, configure exact HTTPS `GOVERNSIM_AUTH_ORIGINS`, and keep legacy bearer opt-in disabled. Back up the MFA encryption key separately from the database; never publish it.
 - Move schema creation to reviewed migrations and give runtime a least-privilege database role. The prototype initializes tables, append-only triggers and the pgvector extension at startup, so its database identity has schema privileges.
 - Configure backups, restore testing, operational monitoring and independently retained signed audit head anchors. Hash chaining is not immutable external storage.
 - Review legal applicability and effective dates with qualified counsel; replace illustrative policy thresholds and synthetic evidence with validated organizational controls and records.

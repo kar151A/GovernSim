@@ -1,6 +1,15 @@
 # API reference
 
-All operations except `/health` require `Authorization: Bearer <token>`. OpenAPI is at `/docs`; use its Authorize control. Token roles cannot be supplied by a client header or form.
+Governance operations require an authenticated account session issued after password and two-factor verification. Browser mutations require the matching `X-CSRF-Token` plus an allowed `Origin`. `/health` and the sign-in shell are public. Account enrollment/login routes are deliberately reachable before a full session; none issues a full session before the second factor succeeds. Roles are assigned locally, never by a browser form. OpenAPI is at `/docs`. Legacy bearer tokens are disabled unless explicitly enabled for automation; see [authentication](AUTHENTICATION.md).
+
+| Account endpoint | Purpose |
+| --- | --- |
+| `POST /api/auth/enroll/start` | Consume a valid invitation and prepare password + authenticator enrollment. |
+| `POST /api/auth/enroll/confirm` | Verify the first authenticator code, issue a session, and return one-use recovery codes once. |
+| `POST /api/auth/login` | Check email/password and create a five-minute verification flow, without workspace access. |
+| `POST /api/auth/verify` | Verify authenticator or recovery code and issue the account session. |
+| `POST /api/auth/logout` | Validate CSRF, revoke the server session, and clear cookies. |
+| `GET /api/session` | Resolve the current server-owned identity, role and session validity. |
 
 | Endpoint | Roles | Purpose |
 | --- | --- | --- |

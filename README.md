@@ -10,6 +10,7 @@ This is a deployable **local MVP**. It is decision support, not legal advice, a 
 
 - Light/dark console themes with saved preference, responsive navigation, keyboard tabs and command search.
 - Seven React workspaces: AI estate, asset profile/graph, evidence, what-if simulator, change impact, human review and audit packages.
+- Invite-only email/password login, mandatory authenticator-app two-factor verification, one-use recovery codes, expiring HttpOnly-cookie sessions and server-side logout.
 - FastAPI API with server-verified roles: AI owner, risk officer, compliance reviewer, auditor and admin.
 - Five AI assets, ten controls, thirty authored representative requirements and twenty-five synthetic evidence artifacts.
 - Versioned deterministic assessments with five statuses: `COMPLIANT`, `EVIDENCE_GAP`, `HUMAN_REVIEW_REQUIRED`, `CONDITIONAL_APPROVAL`, `BLOCKED`.
@@ -56,7 +57,13 @@ py -3.12 scripts\bootstrap.py
 docker compose up --build -d
 ```
 
-Open **http://localhost:8000**. Open `.local-keys.txt` locally and paste the token under `AI_OWNER` to use the app. Sign out and use `COMPLIANCE_REVIEWER` to review its evidence/mappings, or `ADMIN` for policy/library administration.
+Create your first account in the Compose database:
+
+```powershell
+docker compose exec app python scripts/manage_users.py invite --email your-email@example.com --role ADMIN
+```
+
+Open **http://localhost:8000**, choose **Set up invited account**, enter your email and invitation code, create a password, and scan the QR code in your authenticator app. Enter the six-digit code and save the one-use recovery codes. Additional accounts receive roles from the local administrator; there is no public registration.
 
 ```powershell
 # See health and startup errors
@@ -80,10 +87,13 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
 npm.cmd ci --prefix frontend
 npm.cmd run build --prefix frontend
+.\.venv\Scripts\python.exe scripts\manage_users.py invite --email your-email@example.com --role ADMIN
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-Open **http://localhost:8000** and use a token from `.local-keys.txt`. No virtual-environment activation is necessary when you call its Python executable directly.
+The invitation command above creates the first administrator account setup code. Replace the example email with your own account identifier.
+
+Open **http://localhost:8000** and choose **Set up invited account**. Enter the locally generated invitation, set a password of at least 15 characters, and complete authenticator setup. Save the recovery codes. Later visits use **email + password + authenticator code**. No virtual-environment activation is necessary when you call its Python executable directly. See [account setup](docs/AUTHENTICATION.md).
 
 A convenience launcher is included at `scripts\start-local.ps1`; the explicit commands above also work when PowerShell script execution is restricted. Linux/macOS: `bash scripts/start-local.sh`.
 
@@ -91,11 +101,11 @@ For UI development, run the backend on port 8000 and `npm.cmd run dev --prefix f
 
 ## First demo
 
-1. Sign in with an **AI_OWNER** token. The seeded India customer-support agent meets the representative controls using synthetic evidence.
+1. Sign in with an enrolled **AI_OWNER** or **ADMIN** account and its authenticator code. The seeded India customer-support agent meets the representative controls using synthetic evidence.
 2. Open **What-if simulator**, choose that agent, and run the preset EU deployment scenario.
 3. Inspect new privacy/transparency requirements, newly insufficient scopes and remediation. EU deployment does not automatically establish an AI Act high-risk use case.
 4. Inspect **Evidence** and the source/hash/scope of an artifact. New artifacts always start unverified.
-5. Register a high-risk asset or simulate/record an incident. Run an assessment, then use a **COMPLIANCE_REVIEWER** token to record a justified review.
+5. Register a high-risk asset or simulate/record an incident. Run an assessment, then sign in with a separate **COMPLIANCE_REVIEWER** account to record a justified review.
 6. Open **Audit packages** and download JSON, Markdown or PDF. Export the full chain and retain its head hash independently.
 
 An executable walkthrough against your running local API is available:
@@ -104,7 +114,7 @@ An executable walkthrough against your running local API is available:
 .\.venv\Scripts\python.exe scripts\demo.py
 ```
 
-It registers a new demo agent and writes output packages to ignored `artifacts/`. It leaves unrelated missing evidence gaps open.
+This legacy automation walkthrough requires explicit `GOVERNSIM_ALLOW_LEGACY_API_KEYS=true` and the generated local tokens. That mode bypasses browser MFA and is disabled by default. Leave it disabled when using account authentication. The script registers a new demo agent and writes packages to ignored `artifacts/`.
 
 ## Tests and evaluation
 
@@ -137,11 +147,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [scripts/README.md](scripts/README.md), 
 
 ## Configuration
 
-`python scripts/bootstrap.py` is idempotent and never overwrites an existing `.env`. It generates random local tokens and a random database password. The server holds only token hashes; role/name assignments are server controlled. `.local-keys.txt` holds the original credentials and is excluded from Git and Docker builds. Keep it private.
+`python scripts/bootstrap.py` preserves existing configuration and adds a persistent random `GOVERNSIM_AUTH_KEY` during upgrades if absent. This key encrypts authenticator secrets; back it up securely with the database. It also generates the local database password and optional legacy automation tokens on fresh setup. Legacy bearer-token access is disabled by default. `.env` and `.local-keys.txt` are excluded from Git and Docker builds.
 
 | Variable | Purpose |
 | --- | --- |
-| `GOVERNSIM_API_KEYS` | JSON object mapping SHA-256 token hashes to `{name, role}`. Empty configuration refuses startup. |
+| `GOVERNSIM_AUTH_KEY` | Persistent Fernet encryption key generated by bootstrap. Required for account authentication. |
+| `GOVERNSIM_AUTH_COOKIE_SECURE` | Set `true` with HTTPS hosting; loopback HTTP development uses `false`. |
+| `GOVERNSIM_AUTH_ORIGINS` | Exact comma-separated trusted browser origins, including scheme and port. |
+| `GOVERNSIM_ALLOW_LEGACY_API_KEYS` | Default `false`. Enabling this explicitly permits old automation tokens to bypass MFA. |
+| `GOVERNSIM_API_KEYS` | Legacy SHA-256 token-to-role mapping, used only when that opt-in is enabled. |
 | `POSTGRES_PASSWORD` | Generated hexadecimal password used by Compose. |
 | `DATABASE_URL` | SQLAlchemy URL; omitted for local SQLite, supplied automatically by Compose. |
 | `SEED_DEMO` | Explicit synthetic seeding; bootstrap enables it for the demo. Set `false` before a clean non-demo deployment. |
@@ -169,6 +183,6 @@ frontend/src/   typed React workspaces and responsive styles
 scripts/        local setup, demo and evaluation
 ```
 
-API documentation: **http://localhost:8000/docs**. Click **Authorize** and enter a local token. Root endpoint aliases match the supplied brief; the UI uses `/api/*` to avoid path collisions with frontend assets. See [docs/API.md](docs/API.md).
+API documentation: **http://localhost:8000/docs**. Requests made by the signed-in console use its cookie session and CSRF header. Legacy bearer authorization is available only with the explicit automation opt-in. Root endpoint aliases match the supplied brief; the UI uses `/api/*` to avoid path collisions with frontend assets. See [docs/API.md](docs/API.md).
 
 See [docs/DECISION_MODEL.md](docs/DECISION_MODEL.md) for evidence/review semantics, [docs/SOURCES.md](docs/SOURCES.md) for authority and scope, and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) before any hosted deployment.

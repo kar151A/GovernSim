@@ -5,6 +5,7 @@ FastAPI serves authenticated `/api` workflows and the compiled console from `fro
 | Module | Responsibility |
 | --- | --- |
 | `app/main.py` | HTTP boundary, authorization, transactions and static delivery |
+| `app/auth.py` | Invite-only password/TOTP enrollment, sessions, CSRF, recovery and throttling |
 | `app/schemas.py` | Request shape and value validation |
 | `app/kernel.py` | Deterministic assessments of scoped evidence |
 | `app/service.py` | Saved assessments, isolated simulations and dependent reassessment |
@@ -20,7 +21,7 @@ Generate credentials with `python scripts/bootstrap.py`, install `backend/requir
 python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-Use your virtual environment's Python. `/health` reports readiness; `/docs` describes API requests. An empty credential mapping refuses startup. SQLite is the local default; Compose configures PostgreSQL and pgvector.
+Use your virtual environment's Python. `/health` reports readiness; `/docs` describes API requests. Account authentication requires the bootstrap encryption key; legacy bearer tokens are disabled by default. SQLite is the local default; Compose configures PostgreSQL and pgvector.
 
 ## Checks and invariants
 
